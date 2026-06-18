@@ -1,0 +1,36 @@
+.shell { /* FIX (centering bug): absolute fills #app, which is already centered via margin:0 auto in globals.css; position:fixed combined with #app's contain:layout broke the left:50%/translateX(-50%) re-centering below, pushing the shell to the right edge */ position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);animation:fadeIn .25s ease both;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* removed redundant desktop re-centering — absolute .shell fills #app */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:var(--s12);padding:calc(var(--it,0px)+14px) var(--s16) 14px;border-bottom:1px solid var(--b0);background:var(--bg);z-index:50;}
+.topbarTitle{font-family:var(--fd);font-size:var(--f18);font-weight:800;color:var(--t1);flex:1;}
+.ibtn{width:var(--touch);height:var(--touch);background:var(--s1);border:1px solid var(--b0);border-radius:var(--r10);display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;flex-shrink:0;}
+.ibtn:hover{background:var(--s2);}
+.badgeGreen{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:var(--f12);font-weight:700;background:var(--gdim);color:var(--green);flex-shrink:0;}
+.badgeTeal{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:var(--f12);font-weight:700;background:var(--tdim);color:var(--teal);}
+.pageScroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--ib,0px));scrollbar-width:thin;}
+.sosCard{margin:var(--s16);padding:var(--s20);background:linear-gradient(135deg,#1a0a0a,#2d0c0c);border:1px solid rgba(240,82,82,.2);border-radius:var(--r20);display:flex;flex-direction:column;gap:var(--s16);}
+.sosInfo{}
+.sosTitle{font-family:var(--fd);font-size:var(--f18);font-weight:800;margin-bottom:4px;}
+.sosSub{font-size:var(--f13);color:var(--t2);line-height:1.5;}
+.sosBtn{align-self:flex-start;display:flex;align-items:center;gap:var(--s8);background:var(--red);border:none;border-radius:var(--r10);padding:0 var(--s24);min-height:52px;font-family:var(--fd);font-weight:800;font-size:var(--f18);color:white;cursor:pointer;box-shadow:0 4px 20px rgba(240,82,82,.35);transition:transform .15s ease,box-shadow .15s ease;}
+.sosBtn:active,.sosBtnActive{transform:scale(.95);box-shadow:0 2px 10px rgba(240,82,82,.5);}
+.sosActions{display:flex;gap:var(--s12);}
+.btnGhost{flex:1;background:transparent;border:1px solid var(--b1);border-radius:var(--r10);padding:0 var(--s12);min-height:40px;font-size:var(--f13);font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--fd);}
+.btnGhost:hover{background:var(--s2);color:var(--t1);}
+.btnGhostSm{background:transparent;border:1px solid var(--b1);border-radius:var(--r10);padding:0 var(--s12);min-height:32px;font-size:var(--f13);font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--fd);}
+.safetyCards{padding:0 var(--s16);display:flex;flex-direction:column;gap:var(--s12);}
+.safetyCard{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r14);padding:var(--s16);}
+.safetyCardHdr{display:flex;align-items:center;gap:var(--s12);margin-bottom:var(--s12);}
+.safetyIcon{width:36px;height:36px;border-radius:var(--r10);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.safetyCardTitle{font-family:var(--fd);font-size:var(--f15);font-weight:700;}
+.ecItem{display:flex;align-items:center;padding:var(--s8) 0;border-top:1px solid var(--b0);}
+.ecInfo{flex:1;}
+.ecName{font-size:var(--f14,14px);font-weight:700;color:var(--t1);}
+.ecNum{font-size:var(--f13);color:var(--t2);}
+.ecCall{width:36px;height:36px;background:var(--gdim);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--green);cursor:pointer;flex-shrink:0;}
+.ecCall:hover{background:var(--green);color:white;}
+.checkItem{display:flex;align-items:center;gap:var(--s12);padding:var(--s8) 0;border-top:1px solid var(--b0);}
+.checkBox{width:22px;height:22px;border-radius:6px;border:2px solid var(--b1);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all var(--tf) ease;}
+.checkBoxDone{background:var(--teal);border-color:var(--teal);}
+.checkLabel{font-size:var(--f13);color:var(--t2);line-height:1.4;}
+.checkLabelDone{color:var(--t3);text-decoration:line-through;}

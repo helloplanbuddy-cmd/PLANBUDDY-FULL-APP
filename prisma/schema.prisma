@@ -1,0 +1,286 @@
+// ============================================================
+// prisma/schema.prisma — PlanBuddy v5 Database Schema
+// Phase 2A: Full relational model replacing all in-memory stores
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Users ──────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  version     Int      @default(1)
+
+  // Relations
+  sessions        UserSession[]
+  otpCodes        OtpCode[]
+  refreshTokens   RefreshToken[]
+  trips           Trip[]
+  expenses        Expense[]
+  memories        Memory[]
+  chatSessions    ChatSession[]
+  aiUsage         AiUsage[]
+  syncJobs        SyncJob[]
+  syncEvents      SyncEvent[]
+
+  @@map("users")
+  @@index([phone])
+  @@index([createdAt])
+}
+
+// ── OTP Codes (replaces in-memory otpStore Map) ────────────
+
+model OtpCode {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")  // null until user exists
+  phone       String
+  otpHash     String   @map("otp_hash") // SHA-256 hash — never plaintext
+  expiresAt   DateTime @map("expires_at")
+  attempts    Int      @default(0)
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  ipAddress   String?  @map("ip_address")
+  deviceId    String?  @map("device_id")
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("otp_codes")
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+// ── User Sessions (device session management) ─────────────
+
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String    @map("user_id")
+  deviceId         String    @map("device_id")
+  deviceName       String?   @map("device_name")
+  deviceType       String?   @map("device_type") // mobile|desktop|tablet
+  lastSeenAt       DateTime  @default(now()) @map("last_seen_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  ipAddress        String?   @map("ip_address")
+  userAgent        String?   @map("user_agent")
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens    RefreshToken[]
+
+  @@map("user_sessions")
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+}
+
+// ── Refresh Tokens (replaces in-memory refreshFamilies Map) ─
+
+model RefreshToken {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  sessionId   String    @map("session_id")
+  family      String    @unique  // token rotation family ID
+  tokenHash   String    @map("token_hash") // SHA-256 of refresh token
+  expiresAt   DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  revokedReason String? @map("revoked_reason")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  rotatedAt   DateTime? @map("rotated_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([family])
+  @@index([expiresAt])
+}
+
+// ── Trips ──────────────────────────────────────────────────
+
+model Trip {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  title       String
+  from        String
+  to          String
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  budget      Int       @default(0)
+  status      String    @default("draft") // draft|planned|active|completed
+  itinerary   Json?     // stored plan JSON
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  version     Int       @default(1)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+  memories    Memory[]
+
+  @@map("trips")
+  @@index([userId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId, status])
+}
+
+// ── Expenses ───────────────────────────────────────────────
+
+model Expense {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  tripId      String    @map("trip_id")
+  title       String
+  amount      Float
+  category    String    // food|travel|activity|stay|shopping|misc
+  date        DateTime
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  version     Int       @default(1)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+  @@index([userId])
+  @@index([tripId])
+  @@index([userId, tripId])
+  @@index([date])
+}
+
+// ── Memories ───────────────────────────────────────────────
+
+model Memory {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  tripId      String?   @map("trip_id")
+  note        String
+  mood        String?
+  location    String?
+  mediaUrls   Json?     @map("media_urls") // array of URLs
+  aiSummary   String?   @map("ai_summary")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  version     Int       @default(1)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        Trip?     @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@map("memories")
+  @@index([userId])
+  @@index([tripId])
+  @@index([createdAt])
+}
+
+// ── Chat Sessions ──────────────────────────────────────────
+
+model ChatSession {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  tripId      String?   @map("trip_id")
+  messages    Json      @default("[]") // array of {role, content, ts}
+  summary     String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  version     Int       @default(1)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_sessions")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ── AI Usage (replaces in-memory usageStore Map) ──────────
+
+model AiUsage {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  provider      String   @default("anthropic")
+  model         String
+  endpoint      String   // chat|plan|memories
+  tokensInput   Int      @default(0) @map("tokens_input")
+  tokensOutput  Int      @default(0) @map("tokens_output")
+  totalTokens   Int      @default(0) @map("total_tokens")
+  costUsd       Float    @default(0) @map("cost_usd")
+  latencyMs     Int?     @map("latency_ms")
+  success       Boolean  @default(true)
+  errorCode     String?  @map("error_code")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_usage")
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([endpoint])
+}
+
+// ── Sync Jobs (replaces in-memory queue) ──────────────────
+
+model SyncJob {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  entity      String    // trips|expenses|memories|contacts
+  entityId    String    @map("entity_id")
+  operation   String    // create|update|delete
+  status      String    @default("pending") // pending|syncing|synced|failed|conflicted
+  payload     Json
+  retries     Int       @default(0)
+  maxRetries  Int       @default(4) @map("max_retries")
+  errorMsg    String?   @map("error_msg")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  syncedAt    DateTime? @map("synced_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events      SyncEvent[]
+
+  @@map("sync_jobs")
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+// ── Sync Events (audit trail) ─────────────────────────────
+
+model SyncEvent {
+  id          String   @id @default(cuid())
+  jobId       String   @map("job_id")
+  userId      String   @map("user_id")
+  entity      String
+  entityId    String   @map("entity_id")
+  operation   String
+  status      String   // attempted|succeeded|failed|conflicted|resolved
+  entityVersion Int    @default(1) @map("entity_version")
+  conflictData Json?   @map("conflict_data")
+  resolvedBy  String?  @map("resolved_by") // server|client|manual
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  job         SyncJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_events")
+  @@index([jobId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

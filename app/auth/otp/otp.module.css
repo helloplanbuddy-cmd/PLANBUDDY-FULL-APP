@@ -1,0 +1,347 @@
+/* ============================================================
+   otp.module.css — OTP Verification screen
+   Pixel-perfect match to planbuddy-v2.0-production.html
+   ============================================================ */
+
+/* Full screen shell */
+.screen {
+  /* FIX (centering bug): see phone.module.css for full explanation —
+     #app's `contain: layout` makes #app the containing block for
+     position:fixed descendants, so the old left:50%/translateX(-50%)
+     double-offset the screen off to the right. absolute fixes it. */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: screenIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Success overlay */
+.successOverlay {
+  /* FIX: same reasoning — absolute keeps overlay within #app */
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8,15,30,0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.successOverlayOn { opacity: 1; pointer-events: all; }
+
+.successCircle {
+  width: 68px;
+  height: 68px;
+  background: var(--success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.successOverlay h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--text-1); }
+.successOverlay p  { font-size: 13.5px; color: var(--text-2); }
+
+/* Back button */
+.backBtn {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 5;
+  border-radius: var(--r-md);
+  transition: background 0.1s;
+  outline: none;
+}
+.backBtn:focus-visible { box-shadow: 0 0 0 2px rgba(56,124,246,0.5); }
+.backBtn:active { background: var(--bg-card); }
+
+/* Inner scroll */
+.authInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 58px) 20px 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.authBrand {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 18px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.authH {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-1);
+  letter-spacing: -0.4px;
+  margin-bottom: 6px;
+}
+.authSub {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* Phone row */
+.otpPhoneRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.otpPhoneNum {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+}
+.otpChangeBtn {
+  font-size: 12.5px;
+  color: var(--primary);
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-family: var(--font);
+  outline: none;
+}
+.otpChangeBtn:focus-visible { text-decoration: underline; }
+
+/* Banners */
+.banner {
+  display: flex;
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+}
+.bannerDanger { background: var(--danger-bg); border: 1px solid rgba(237,64,64,0.22); }
+.bannerWarn   { background: var(--warn-bg);   border: 1px solid rgba(240,152,10,0.22); }
+.bannerIcon  { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.bannerBody  { flex: 1; }
+.bannerTitle { font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 2px; }
+.bannerMsg   { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+
+/* OTP grid */
+.otpContainer {
+  position: relative;
+  margin-bottom: 6px;
+  cursor: text;
+}
+.otpHidden {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  border: none;
+  background: transparent;
+  caret-color: transparent;
+  cursor: pointer;
+}
+
+.otpGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+
+.otpCell {
+  height: 52px;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(255,255,255,0.09);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+  position: relative;
+}
+
+.otpCellActive {
+  border-color: var(--border-focus);
+  background: var(--primary-bg);
+}
+.otpCellActive::after {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 18px;
+  background: var(--primary);
+  animation: blink 1.1s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.otpCellFilled { border-color: rgba(255,255,255,0.15); }
+.otpCellErr    { border-color: var(--border-err);   background: var(--danger-bg); }
+.otpCellOk     { border-color: var(--border-valid); background: var(--accent-bg); }
+.otpCellLocked { opacity: 0.5; }
+
+/* Error row */
+.otpErrRow {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.otpErrText {
+  font-size: 12px;
+  color: var(--danger);
+  line-height: 1.4;
+  display: none;
+}
+.otpErrTextOn { display: block; }
+.otpClearLink {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  padding: 0;
+}
+
+/* Timer row */
+.timerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 18px;
+}
+.timerLeft {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.timerRing svg { display: block; }
+
+.resendBtn {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+  background: none;
+  border: none;
+  cursor: default;
+  font-family: var(--font);
+  padding: 6px;
+  outline: none;
+  transition: color 0.15s;
+}
+.resendBtnReady {
+  color: var(--primary);
+  cursor: pointer;
+}
+.resendBtnReady:focus-visible { text-decoration: underline; }
+
+/* CTA */
+.btn {
+  height: 52px;
+  width: 100%;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 15.5px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 20px rgba(56,124,246,0.28);
+  transition: background 0.12s, transform 0.1s;
+  outline: none;
+  margin-bottom: 16px;
+}
+.btn:focus-visible { box-shadow: 0 0 0 3px rgba(56,124,246,0.45); }
+.btn:active:not(:disabled) { transform: scale(0.985); background: var(--primary-d); }
+.btn:disabled { opacity: 0.32; pointer-events: none; }
+.btnLabel { display: flex; align-items: center; gap: 7px; }
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.demoHint {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.demoHint strong { color: var(--primary); }
+
+.keyboardPad {
+  flex-shrink: 0;
+  height: 80px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen { animation-duration: 0.01ms !important; }
+  .otpCellActive::after { animation: none; opacity: 1; }
+  .spinner { animation: none; opacity: 0.5; }
+  .successCircle { animation: none; }
+}
+
+/* Phase 2E: 320px safety */
+@media (max-width: 360px) {
+  .title { font-size: 22px; }
+  .cell { width: 42px; height: 50px; font-size: 22px; }
+}

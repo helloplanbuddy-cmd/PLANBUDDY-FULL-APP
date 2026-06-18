@@ -1,0 +1,148 @@
+.shell {
+  /* FIX (centering bug): see phone.module.css for full explanation —
+     #app's `contain: layout` makes #app the containing block for
+     position:fixed descendants, so the old left:50%/translateX(-50%)
+     double-offset the shell off to the right. absolute fixes it. */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: fadeIn 0.25s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.loadingPulse { flex: 1; background: var(--s1); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--it, 0px) + 14px) var(--s16) 14px;
+  border-bottom: 1px solid var(--b0);
+  background: var(--bg);
+  z-index: 50;
+}
+.topbarTitle { font-family: var(--fd); font-size: var(--f18); font-weight: 800; color: var(--t1); }
+.ibtn {
+  width: var(--touch); height: var(--touch);
+  background: var(--s1); border: 1px solid var(--b0);
+  border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2); cursor: pointer;
+  transition: background var(--tf) ease;
+}
+.ibtn:hover { background: var(--s2); }
+
+.pageScroll {
+  flex: 1;
+  overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + var(--ib, 0px));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(75,142,241,.12) transparent;
+}
+.pageScroll::-webkit-scrollbar { width: 3px; }
+.pageScroll::-webkit-scrollbar-thumb { background: rgba(75,142,241,.12); border-radius: 99px; }
+
+/* Banner */
+.exploreBanner {
+  margin: var(--s16);
+  padding: var(--s20);
+  background: linear-gradient(135deg,#0c2040,#091830);
+  border: 1px solid rgba(75,142,241,.18);
+  border-radius: var(--r20);
+  display: flex;
+  align-items: center;
+  gap: var(--s16);
+  position: relative;
+  overflow: hidden;
+}
+.exploreBanner::before {
+  content: '';
+  position: absolute;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(75,142,241,.12) 0%, transparent 65%);
+  right: -40px; top: -40px;
+  pointer-events: none;
+}
+.bannerEyebrow { font-size: var(--f12); font-weight: 700; font-family: var(--fd); color: var(--teal); letter-spacing: .6px; text-transform: uppercase; margin-bottom: var(--s8); }
+.bannerHeadline { font-family: var(--fd); font-size: var(--f22); font-weight: 800; line-height: 1.2; letter-spacing: -.3px; }
+.bannerSub { font-size: var(--f13); color: var(--t2); margin-top: var(--s8); }
+.exploreBannerIcon {
+  width: 64px; height: 64px; flex-shrink: 0;
+  background: rgba(75,142,241,.12);
+  border-radius: var(--r14);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue);
+}
+
+/* Section header */
+.secHdr { display: flex; align-items: center; justify-content: space-between; padding: var(--s16) var(--s16) var(--s12); }
+.secTitle { font-family: var(--fd); font-size: var(--f16); font-weight: 700; color: var(--t1); }
+
+/* Explore grid — Bento layout */
+.expGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s10, 10px);
+  padding: 0 var(--s16);
+}
+.expCard {
+  position: relative;
+  border-radius: var(--r14);
+  overflow: hidden;
+  height: 120px;
+  cursor: pointer;
+  transition: transform var(--tf) ease;
+}
+.expCard:active { transform: scale(.97); }
+.span2 { grid-column: span 2; height: 140px; }
+.expCardIcon {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.22);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+}
+.expSpan2Icon { width: 52px; height: 52px; }
+.expOverlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 60%);
+}
+.expFooter { position: absolute; bottom: 0; left: 0; right: 0; padding: var(--s12); z-index: 2; }
+.expName { font-family: var(--fd); font-size: var(--f15); font-weight: 800; color: white; margin-bottom: 2px; }
+.expSub { font-size: var(--f12); color: rgba(255,255,255,.75); }
+
+/* Insights */
+.insightsList { padding: 0 var(--s16); display: flex; flex-direction: column; gap: var(--s12); }
+.destInfoCard {
+  background: var(--s1);
+  border: 1px solid var(--b0);
+  border-radius: var(--r14);
+  padding: var(--s16);
+}
+.insightHdr { display: flex; align-items: center; gap: var(--s12); margin-bottom: var(--s12); }
+.insightIcon {
+  width: 40px; height: 40px;
+  border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.insightName { font-family: var(--fd); font-size: var(--f15); font-weight: 700; }
+.insightSub { font-size: var(--f13); color: var(--t2); }
+.destInfoGrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s8); }
+.infoChip {
+  background: var(--s2);
+  border-radius: var(--r10);
+  padding: var(--s8) var(--s12);
+}
+.infoChipLabel { font-size: var(--f12); color: var(--t3); margin-bottom: 3px; }
+.infoChipValue { font-size: var(--f13); font-weight: 700; color: var(--t1); font-family: var(--fd); }
