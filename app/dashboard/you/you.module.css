@@ -1,0 +1,93 @@
+.shell {
+  /* FIX (centering bug): see phone.module.css for full explanation —
+     #app's `contain: layout` makes #app the containing block for
+     position:fixed descendants, so the old left:50%/translateX(-50%)
+     double-offset the shell off to the right. absolute fixes it. */
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  animation: fadeIn 0.25s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.loadingPulse { flex: 1; background: var(--s1); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+.topbar {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: calc(var(--it,0px) + 14px) var(--s16) 14px;
+  border-bottom: 1px solid var(--b0); background: var(--bg); z-index: 50;
+}
+.topbarTitle { font-family: var(--fd); font-size: var(--f18); font-weight: 800; color: var(--t1); }
+.ibtn {
+  width: var(--touch); height: var(--touch);
+  background: var(--s1); border: 1px solid var(--b0);
+  border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2); cursor: pointer;
+}
+.ibtn:hover { background: var(--s2); }
+
+.pageScroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + var(--ib, 0px));
+  scrollbar-width: thin; scrollbar-color: rgba(75,142,241,.1) transparent;
+}
+.pageScroll::-webkit-scrollbar { width: 3px; }
+.pageScroll::-webkit-scrollbar-thumb { background: rgba(75,142,241,.1); border-radius: 99px; }
+
+/* Profile hero */
+.profileHero {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--s32) var(--s16) var(--s20);
+  gap: var(--s8);
+}
+.profileAv {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, var(--blue), var(--teal));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fd); font-weight: 800; font-size: var(--f26);
+  color: white; margin-bottom: var(--s8);
+  box-shadow: 0 0 32px rgba(75,142,241,.25);
+}
+.profileName { font-family: var(--fd); font-size: var(--f20); font-weight: 800; color: var(--t1); }
+.profilePhone { font-size: var(--f13); color: var(--t2); }
+.badgeTeal { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: var(--f12); font-weight: 700; background: var(--tdim); color: var(--teal); margin-top: var(--s4); }
+
+/* Stats */
+.statsRow {
+  display: flex; gap: var(--s12);
+  padding: 0 var(--s16) var(--s20);
+}
+.statCard {
+  flex: 1; background: var(--s1); border: 1px solid var(--b0);
+  border-radius: var(--r14); padding: var(--s16);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.statVal { font-family: var(--fd); font-size: var(--f22); font-weight: 800; color: var(--t1); }
+.statLbl { font-size: var(--f12); color: var(--t2); }
+
+/* Menu */
+.menuList { padding: 0 var(--s16); display: flex; flex-direction: column; gap: 2px; }
+.menuBtn {
+  width: 100%; display: flex; align-items: center; gap: var(--s16);
+  background: var(--s1); border: none;
+  border-radius: var(--r14); padding: var(--s16);
+  cursor: pointer; text-align: left; color: var(--t1);
+  transition: background var(--tf) ease;
+  margin-bottom: 2px;
+}
+.menuBtn:hover { background: var(--s2); }
+.menuBtn:active { transform: scale(.99); }
+.menuBtnIcon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: var(--s2); border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2);
+}
+.menuBtnText { flex: 1; font-size: var(--f15); font-weight: 600; font-family: var(--fd); }
+.menuBtnArrow { color: var(--t3); flex-shrink: 0; }
+.menuBtnDanger { margin-top: var(--s8); }
+.menuBtnDanger .menuBtnIcon { background: var(--rdim); color: var(--red); }
+.menuBtnDanger .menuBtnText { color: var(--red); }

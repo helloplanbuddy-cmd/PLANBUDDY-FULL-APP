@@ -1,0 +1,388 @@
+/* ============================================================
+   phone.module.css — Login / Phone screen
+   Pixel-perfect match to planbuddy-v2.0-production.html
+   ============================================================ */
+
+/* Skip link */
+.skipLink {
+  position: absolute;
+  top: -40px;
+  left: 16px;
+  background: var(--primary);
+  color: white;
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 9999;
+  transition: top 0.1s;
+  text-decoration: none;
+}
+.skipLink:focus {
+  top: calc(var(--safe-top) + 8px);
+}
+
+/* Full screen shell */
+.screen {
+  /* FIX (centering bug): was position:fixed, which combined with
+     #app's `contain: layout` made #app the containing block for
+     fixed descendants. The redundant left:50%/translateX(-50%) below
+     then double-offset the screen to the right edge, leaving a black
+     gap on the left. `absolute` fills #app directly (#app is already
+     centered via margin:0 auto). */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  /* Slide in from right */
+  animation: screenIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Back button */
+.backBtn {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 5;
+  border-radius: var(--r-md);
+  transition: background 0.1s;
+  outline: none;
+}
+.backBtn:focus-visible { box-shadow: 0 0 0 2px rgba(56,124,246,0.5); }
+.backBtn:active { background: var(--bg-card); }
+
+/* Scrollable inner */
+.authInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 58px) 20px 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Brand */
+.authBrand {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 18px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Heading */
+.authH {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-1);
+  letter-spacing: -0.4px;
+  margin-bottom: 6px;
+}
+
+.authSub {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* Value block */
+.valueBlock {
+  background: var(--primary-bg);
+  border: 1px solid rgba(56,124,246,0.15);
+  border-radius: var(--r-md);
+  padding: 11px 14px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.valueIcon { font-size: 20px; flex-shrink: 0; }
+.valueMain { font-size: 12.5px; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+.valueSub  { font-size: 11.5px; color: var(--text-3); }
+
+/* Restore badge */
+.restoreBadge {
+  display: flex;
+  background: var(--accent-bg);
+  border: 1px solid rgba(5,202,153,0.2);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--accent);
+  align-items: center;
+  gap: 8px;
+}
+
+/* Error/warning banners */
+.banner {
+  display: flex;
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+}
+.bannerDanger {
+  background: var(--danger-bg);
+  border: 1px solid rgba(237,64,64,0.22);
+}
+.bannerIcon  { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.bannerBody  { flex: 1; }
+.bannerTitle { font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 2px; }
+.bannerMsg   { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+.bannerRetry {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  padding: 4px 0 0;
+  text-align: left;
+}
+
+/* Locked banner */
+.lockedBanner {
+  display: block;
+  background: var(--danger-bg);
+  border: 1px solid rgba(237,64,64,0.22);
+  border-radius: var(--r-md);
+  padding: 14px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.lockedBanner h3 { font-size: 14px; font-weight: 700; color: #fca5a5; margin-bottom: 6px; }
+.lockedBanner p  { font-size: 12px; color: var(--text-3); line-height: 1.5; }
+.lockedCountdown {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--danger);
+  margin: 8px 0 6px;
+  font-family: var(--font-mono);
+}
+
+/* Phone input */
+.phoneWrap { margin-bottom: 6px; }
+.phoneField {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(255,255,255,0.09);
+  border-radius: var(--r-md);
+  height: 56px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.phoneField:focus-within   { border-color: var(--border-focus); }
+.phoneFieldValid { border-color: var(--border-valid); }
+.phoneFieldErr   { border-color: var(--border-err); }
+.phoneFieldLocked { opacity: 0.5; pointer-events: none; }
+
+.cc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.flag { font-size: 17px; }
+
+.phoneField input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-1);
+  padding: 0 10px;
+  letter-spacing: 1.5px;
+  font-family: var(--font-mono);
+  width: 100%;
+  caret-color: var(--primary);
+}
+.phoneField input::placeholder {
+  color: var(--text-3);
+  font-size: 14px;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-family: var(--font);
+}
+
+.clearBtn {
+  width: 40px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.fieldErr {
+  font-size: 12px;
+  color: var(--danger);
+  padding: 4px 2px 0;
+  min-height: 20px;
+  display: none;
+  line-height: 1.4;
+}
+.fieldErrOn { display: block; }
+
+/* Trust signals */
+.trustRow {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  margin-top: 10px;
+}
+.trustChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Terms */
+.terms {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.terms a { color: var(--primary); text-decoration: none; }
+
+/* Primary CTA button */
+.btn {
+  height: 52px;
+  width: 100%;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 15.5px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 20px rgba(56,124,246,0.28);
+  transition: background 0.12s, transform 0.1s;
+  outline: none;
+  margin-bottom: 4px;
+}
+.btn:focus-visible { box-shadow: 0 0 0 3px rgba(56,124,246,0.45); }
+.btn:active:not(:disabled) { transform: scale(0.985); background: var(--primary-d); }
+.btn:disabled { opacity: 0.32; pointer-events: none; }
+.btnLabel { display: flex; align-items: center; gap: 7px; }
+
+/* Spinner inside button */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Social section */
+.socialSection { margin-top: 2px; }
+.dividerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 11px;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.dividerRow::before, .dividerRow::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.socialStub {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+.soonTag {
+  position: absolute;
+  right: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid rgba(240,152,10,0.2);
+  border-radius: var(--r-pill);
+  padding: 2px 7px;
+}
+
+/* Keyboard pad spacer */
+.keyboardPad {
+  flex-shrink: 0;
+  height: 80px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .screen { animation-duration: 0.01ms !important; }
+  .spinner { animation: none; opacity: 0.5; }
+}
+
+/* Phase 2E: 320px safety */
+@media (max-width: 360px) {
+  .screen { padding: 0 16px; }
+  .title { font-size: 24px; }
+  .phoneRow input { font-size: 18px; }
+}

@@ -1,0 +1,155 @@
+/* ============================================================
+   onboarding.module.css — Onboarding flow styles
+   Pixel-perfect match to PlanBuddy v2.0 design system
+   ============================================================ */
+
+/* Full-screen shell */
+.screen {
+  /* FIX (centering bug): see phone.module.css for full explanation —
+     #app's `contain: layout` makes #app the containing block for
+     position:fixed descendants, so the old left:50%/translateX(-50%)
+     double-offset the screen off to the right. absolute fixes it. */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #070e1c;
+  overflow: hidden;
+  /* Fade in from splash */
+  animation: screenIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes screenIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Skip button — top-right */
+.skipBtn {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  right: 16px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #93b0d0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 5;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s ease;
+}
+
+.skipBtn:focus-visible {
+  box-shadow: 0 0 0 2px #387cf6;
+}
+
+.skipBtn:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Visual illustration area */
+.visual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 60px) 20px 0;
+  /* Slide-up animation on slide change */
+  animation: visualIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes visualIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Bottom area */
+.bottom {
+  padding: 18px 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Pagination dots */
+.dots {
+  margin-bottom: 16px;
+}
+
+/* Text hook */
+.hook {
+  margin-bottom: 18px;
+  animation: hookIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+@keyframes hookIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heading {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #eef4ff;
+  letter-spacing: -0.4px;
+  margin-bottom: 6px;
+  outline: none; /* Suppress focus ring on programmatic focus */
+}
+
+/* <em> inside heading renders in blue */
+.heading :global(em) {
+  font-style: normal;
+  color: #387cf6;
+}
+
+.description {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: #93b0d0;
+  line-height: 1.55;
+}
+
+/* Desktop container — was a redundant re-centering hack, now removed
+   (absolute .screen above already fills #app, which is centered
+   via margin:0 auto in globals.css) */
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .visual,
+  .hook {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Phase 2E: 320px safety */
+@media (max-width: 360px) {
+  .screen { padding: 0 12px; }
+  .heading { font-size: clamp(24px, 8vw, 32px); }
+  .description { font-size: 14px; }
+}
