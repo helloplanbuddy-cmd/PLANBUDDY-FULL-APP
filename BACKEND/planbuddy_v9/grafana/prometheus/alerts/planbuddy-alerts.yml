@@ -1,0 +1,109 @@
+groups:
+  # ═══════════════════════════════════════════════════════════════
+  # PlanBuddy Production Alert Rules
+  # ═══════════════════════════════════════════════════════════════
+
+  - name: planbuddy_critical
+    rules:
+      # --- Database Down ---
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been unreachable for >1 minute. All payment processing halted."
+          runbook: "1. Check pg_isready on host. 2. Verify connection pool not exhausted. 3. Check RDS console for automated failover."
+
+      # --- Redis Down ---
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for >1-minute. Idempotency and session cache degraded."
+          runbook: "1. Check redis-cli ping. 2. Verify Redis memory not exhausted. 3. Check for OOM kills."
+
+  - name: planbuddy_high
+    rules:
+      # --- Payment Failure Spike ---
+      - alert: PaymentFailureSpike
+        expr: rate(planbuddy_payment_failed_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Payment failure rate elevated"
+          description: "Payment failures exceeding 0.1/sec for 5 minutes. Possible Razorpay outage or card issues."
+          runbook: "1. Check Razorpay status page. 2. Verify webhook signature validation. 3. Check payment error logs."
+
+      # --- Webhook Failure Spike ---
+      - alert: WebhookFailureSpike
+        expr: rate(planbuddy_webhook_processing_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Webhook processing error rate elevated"
+          description: "Webhook processing failures exceeding 0.05/sec for 5 minutes."
+          runbook: "1. Check webhook processor logs. 2. Verify DB connectivity. 3. Check for schema migration issues."
+
+      # --- High Error Rate ---
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "HTTP 5xx error rate > 5%"
+          description: "Server error rate has been above 5% for 5 minutes."
+          runbook: "1. Check application logs for stack traces. 2. Verify DB/Redis connectivity. 3. Check for OOM."
+
+      # --- DB Connection Pool Exhaustion ---
+      - alert: DBPoolExhaustion
+        expr: pg_stat_activity_count > 90
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "PostgreSQL connection count > 90"
+          description: "Connection count approaching max_connections. Risk of connection refused errors."
+          runbook: "1. Check for connection leaks. 2. Verify DB_POOL_MAX setting. 3. Consider increasing max_connections."
+
+  - name: planbuddy_medium
+    rules:
+      # --- Queue Backlog ---
+      - alert: QueueBacklog
+        expr: bullmq_waiting_jobs > 100
+        for: 10m
+        labels:
+          severity: medium
+        annotations:
+          summary: "Queue backlog exceeds 100 jobs"
+          description: "Background job queue has >100 waiting jobs for 10 minutes."
+          runbook: "1. Check worker health. 2. Verify Redis connectivity. 3. Check for job processing errors in DLQ."
+
+      # --- Slow Requests ---
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: medium
+        annotations:
+          summary: "P95 request latency > 5 seconds"
+          description: "95th percentile latency has been above 5 seconds for 10 minutes."
+          runbook: "1. Check slow query log. 2. Verify connection pool not saturated. 3. Check for lock contention."
+
+      # --- Health Check Degraded ---
+      - alert: HealthCheckDegraded
+        expr: planbuddy_health_ready == 0
+        for: 3m
+        labels:
+          severity: medium
+        annotations:
+          summary: "Application readiness check failing"
+          description: "Health readiness endpoint returning non-OK for 3 minutes."
+          runbook: "1. Check DB connectivity from app. 2. Check Redis connectivity. 3. Review application logs."

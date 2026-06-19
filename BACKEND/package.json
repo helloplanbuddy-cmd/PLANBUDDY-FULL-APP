@@ -1,0 +1,8 @@
+{
+  "name": "planbuddy-v9-monorepo",
+  "private": true,
+  "scripts": {
+    "test": "cd planbuddy_v9 && npm test",
+    "test:refund": "cd planbuddy_v9 && npx jest __tests__/refund-exactly-once.test.js --runInBand --verbose"
+  }
+}

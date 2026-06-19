@@ -1,0 +1,50 @@
+/* SyncStatusBadge — fixed bottom-right, non-intrusive */
+.badge {
+  position:        fixed;
+  bottom:          calc(72px + env(safe-area-inset-bottom)); /* above bottom nav */
+  right:           16px;
+  display:         inline-flex;
+  align-items:     center;
+  gap:             5px;
+  padding:         4px 10px;
+  border-radius:   20px;
+  font-size:       11px;
+  font-weight:     600;
+  letter-spacing:  0.01em;
+  backdrop-filter: blur(8px);
+  pointer-events:  none;
+  z-index:         999;
+}
+
+.syncing {
+  background: rgba(99, 102, 241, 0.15);
+  color:      #a5b4fc;
+  border:     1px solid rgba(99, 102, 241, 0.25);
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.12);
+  color:      #fca5a5;
+  border:     1px solid rgba(239, 68, 68, 0.2);
+}
+
+.dot {
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.syncing .dot {
+  background:  #6366f1;
+  animation:   pulse 1.2s ease-in-out infinite;
+}
+
+.error .dot {
+  background: #ef4444;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}

@@ -1,0 +1,83 @@
+.botNav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  background: var(--bg2);
+  border-top: 1px solid var(--b0);
+  padding-bottom: var(--ib, 0px);
+}
+
+.navBtn {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 2px;
+  color: var(--t3);
+  font-size: clamp(10px, 2.8vw, 13px);
+  font-weight: 600;
+  font-family: var(--fb);
+  cursor: pointer;
+  transition: color var(--tf, 140ms) ease;
+  min-height: 56px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.navBtnActive {
+  color: var(--blue);
+}
+
+.navBtn svg {
+  transition: transform 220ms cubic-bezier(.34,1.56,.64,1);
+}
+
+.navBtnActive svg {
+  transform: scale(1.1);
+}
+
+.navBtn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+.navLabel {
+  font-size: clamp(10px, 2.8vw, 11px);
+  font-weight: 600;
+}
+
+.navFabWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.navFab {
+  width: 48px;
+  height: 48px;
+  background: var(--blue);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shb);
+  border: none;
+  cursor: pointer;
+  transition: transform 220ms cubic-bezier(.34,1.56,.64,1);
+}
+
+.navFab:active {
+  transform: scale(.91);
+}
+
+.navFab:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}

@@ -1,0 +1,188 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+env:
+  NODE_VERSION: '20'
+  POSTGRES_VERSION: '16'
+  POSTGRES_DB: planbuddy_test
+  POSTGRES_USER: test
+  POSTGRES_PASSWORD: test
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # Job 1: Install & Cache Dependencies
+  # ═══════════════════════════════════════════════════════════════
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: planbuddy_v9/package-lock.json
+      - run: cd planbuddy_v9 && npm ci
+      - uses: actions/cache/save@v4
+        with:
+          path: planbuddy_v9/node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('planbuddy_v9/package-lock.json') }}
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 2: Lint & Security Audit
+  # ═══════════════════════════════════════════════════════════════
+  lint-audit:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: planbuddy_v9/node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('planbuddy_v9/package-lock.json') }}
+      - name: npm audit (non-blocking advisory)
+        working-directory: planbuddy_v9
+        run: npm audit --audit-level=critical || true
+        continue-on-error: true
+      - name: Validate env config
+        working-directory: planbuddy_v9
+        run: node -e "require('./config/env'); console.log('env.js loaded OK')"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 3: Test Suite (with PostgreSQL)
+  # ═══════════════════════════════════════════════════════════════
+  test:
+    needs: install
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: planbuddy_v9/node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('planbuddy_v9/package-lock.json') }}
+      - name: Run test suite
+        working-directory: planbuddy_v9
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://test:test@localhost:5432/planbuddy_test
+          DATABASE_TEST_URL: postgres://test:test@localhost:5432/planbuddy_test
+          JWT_SECRET: test_ci_jwt_secret_that_is_long_enough_for_hs256
+          RAZORPAY_KEY_ID: test
+          RAZORPAY_KEY_SECRET: test
+          RAZORPAY_WEBHOOK_SECRET: test
+          REDIS_URL: redis://localhost:6379
+          REDIS_QUEUE_URL: redis://localhost:6379
+          CORS_ORIGINS: http://localhost:3000
+          KNOWN_PROXY_IPS: 127.0.0.1
+        run: npm test -- --runInBand --forceExit
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: planbuddy_v9/test-results/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 4: Migration Validation
+  # ═══════════════════════════════════════════════════════════════
+  migrations:
+    needs: install
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: planbuddy_v9/node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('planbuddy_v9/package-lock.json') }}
+      - name: Run all migrations against clean database
+        working-directory: planbuddy_v9
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://test:test@localhost:5432/planbuddy_test
+          JWT_SECRET: test_ci_jwt_secret_that_is_long_enough_for_hs256
+          RAZORPAY_KEY_ID: test
+          RAZORPAY_KEY_SECRET: test
+          RAZORPAY_WEBHOOK_SECRET: test
+          REDIS_URL: redis://localhost:6379
+          REDIS_QUEUE_URL: redis://localhost:6379
+          CORS_ORIGINS: http://localhost:3000
+          KNOWN_PROXY_IPS: 127.0.0.1
+        run: node scripts/verify-migrations.js
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 5: Build Docker Image (main branch only)
+  # ═══════════════════════════════════════════════════════════════
+  build:
+    needs: [lint-audit, test, migrations]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t planbuddy:${{ github.sha }} planbuddy_v9/
+      - name: Validate image starts
+        run: |
+          docker run -d --name test-build \
+            -e NODE_ENV=test \
+            -e DATABASE_URL=postgres://test:test@localhost:5432/test \
+            -e JWT_SECRET=test_ci_jwt_secret_that_is_long_enough_for_hs256 \
+            -e RAZORPAY_KEY_ID=test \
+            -e RAZORPAY_KEY_SECRET=test \
+            -e RAZORPAY_WEBHOOK_SECRET=test \
+            -e REDIS_URL=redis://localhost:6379 \
+            -e REDIS_QUEUE_URL=redis://localhost:6379 \
+            -e CORS_ORIGINS=http://localhost \
+            -e KNOWN_PROXY_IPS=127.0.0.1 \
+            planbuddy:${{ github.sha }}
+          sleep 5
+          docker logs test-build | tail -20
+          docker stop test-build
+      - name: Cleanup
+        if: always()
+        run: docker rm -f test-build 2>/dev/null || true

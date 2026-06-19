@@ -1,0 +1,118 @@
+.shell {
+  /* FIX (centering bug): see phone.module.css for full explanation —
+     #app's `contain: layout` makes #app the containing block for
+     position:fixed descendants, so the old left:50%/translateX(-50%)
+     double-offset the shell off to the right. absolute fixes it. */
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  animation: fadeIn 0.25s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.topbar {
+  flex-shrink: 0; display: flex; align-items: center; gap: var(--s12);
+  padding: calc(var(--it,0px) + 14px) var(--s16) 14px;
+  border-bottom: 1px solid var(--b0); background: var(--bg); z-index: 50;
+}
+.topbarTitle { font-family: var(--fd); font-size: var(--f18); font-weight: 800; color: var(--t1); flex: 1; }
+.ibtn {
+  width: var(--touch); height: var(--touch);
+  background: var(--s1); border: 1px solid var(--b0);
+  border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2); cursor: pointer; flex-shrink: 0;
+}
+.ibtn:hover { background: var(--s2); }
+.pageScroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + var(--ib, 0px));
+  scrollbar-width: thin;
+}
+.filterRow {
+  display: flex; gap: var(--s8);
+  overflow-x: auto; padding: var(--s16) var(--s16) 0;
+  scrollbar-width: none;
+}
+.filterRow::-webkit-scrollbar { display: none; }
+.chip {
+  display: inline-flex; align-items: center;
+  height: 34px; padding: 0 var(--s12);
+  background: var(--s1); border: 1px solid var(--b0);
+  border-radius: 999px; font-size: var(--f13); font-weight: 600; color: var(--t2);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all var(--tf) ease; font-family: var(--fb);
+}
+.chipActive { background: var(--blue); border-color: var(--blue); color: white; }
+.tripsList { padding: var(--s16); display: flex; flex-direction: column; gap: var(--s12); }
+.tripCard {
+  display: flex; align-items: center; gap: var(--s16);
+  background: var(--s1); border: 1px solid var(--b1);
+  border-radius: var(--r14); padding: var(--s16);
+  cursor: pointer; transition: background var(--tf) ease;
+}
+.tripCard:hover { background: var(--s2); }
+.tripThumb {
+  width: 52px; height: 52px; border-radius: var(--r10);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.tripInfo { flex: 1; min-width: 0; }
+.tripHdr { display: flex; align-items: center; gap: var(--s8); margin-bottom: 4px; }
+.tripName { font-family: var(--fd); font-size: var(--f15); font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.tripMeta { font-size: var(--f13); color: var(--t2); margin-bottom: 4px; }
+.tripBudget { font-size: var(--f13); color: var(--teal); font-weight: 700; font-family: var(--fd); }
+.tripArrow { color: var(--t3); flex-shrink: 0; }
+.statusBadge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: var(--f12); font-weight: 700; flex-shrink: 0; }
+.statusPlanned { background: var(--bdim); color: var(--blue); }
+.statusDone    { background: var(--tdim); color: var(--teal); }
+.statusDraft   { background: var(--adim); color: var(--amber); }
+.btnOutlineFull {
+  width: 100%; min-height: var(--touch);
+  background: transparent; border: 1.5px solid var(--b1);
+  border-radius: var(--r10);
+  font-family: var(--fd); font-size: var(--f15); font-weight: 600; color: var(--t2);
+  cursor: pointer; transition: all var(--tf) ease;
+}
+.btnOutlineFull:hover { border-color: var(--blue); color: var(--blue); background: var(--bdim); }
+
+/* Fix #3: Empty state */
+.emptyState {
+  padding: var(--s24) var(--s16);
+  text-align: center;
+}
+.emptyTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--clr-text, #e2e8f0);
+  margin-bottom: 4px;
+}
+.emptyMsg {
+  font-size: 0.85rem;
+  color: var(--clr-muted, #94a3b8);
+}
+
+/* Phase 2E: Trip delete button */
+.tripDeleteBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--fg3);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+  margin-left: 4px;
+}
+.tripDeleteBtn:hover, .tripDeleteBtn:focus-visible {
+  color: var(--red, #ef4444);
+  background: rgba(239,68,68,0.08);
+  outline: 2px solid var(--red, #ef4444);
+}

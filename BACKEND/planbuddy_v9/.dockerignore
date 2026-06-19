@@ -1,0 +1,59 @@
+# ──────────────────────────────────────────────────────────────────────
+# PlanBuddy Backend — Docker Build Exclusions (v1.1)
+# Prevents secrets, tests, and attack tools from shipping to production.
+# P3-05 FIX: now also excludes tmp_*.sql and fixed_*.sql.
+# ──────────────────────────────────────────────────────────────────────
+
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+
+# Chaos / Attack Tools
+chaos/
+
+# Tests
+tests/
+__tests__/
+*.test.js
+*.spec.js
+jest.config.js
+
+# Debug / Temporary Scripts
+tmp_*.js
+tmp_*.txt
+tmp_*.sql
+fixed_*.sql
+verify-server.js
+VERIFY-BACKEND.JS
+SETUP.JS
+quick-repair.js
+minimal-server.js
+
+# Logs
+logs/
+*.log
+
+# Node Modules (should be rebuilt in container)
+node_modules/
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# CI / Build artifacts
+.git/
+.gitignore
+.github/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local diagnostic artefacts
+diagnostics/
+load-test*.js
+load-test-results*.json

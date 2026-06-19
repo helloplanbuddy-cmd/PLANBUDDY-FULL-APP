@@ -1,0 +1,6 @@
+{
+  "version": "001",
+  "description": "Initial schema — users, otp_codes, user_sessions, refresh_tokens, trips, expenses, memories, chat_sessions, ai_usage, sync_jobs, sync_events",
+  "appliedAt": null,
+  "rollbackScript": "001_rollback.sql"
+}

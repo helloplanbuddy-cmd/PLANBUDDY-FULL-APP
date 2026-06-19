@@ -1,0 +1,51 @@
+.shell { /* FIX (centering bug): absolute fills #app, which is already centered via margin:0 auto in globals.css; position:fixed combined with #app's contain:layout broke the left:50%/translateX(-50%) re-centering below, pushing the shell to the right edge */ position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);animation:fadeIn .25s ease both; }
+@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+/* removed redundant desktop re-centering — absolute .shell fills #app */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:var(--s12);padding:calc(var(--it,0px) + 14px) var(--s16) 14px;border-bottom:1px solid var(--b0);background:var(--bg);z-index:50;}
+.topbarTitle{font-family:var(--fd);font-size:var(--f18);font-weight:800;color:var(--t1);flex:1;}
+.ibtn{width:var(--touch);height:var(--touch);background:var(--s1);border:1px solid var(--b0);border-radius:var(--r10);display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;flex-shrink:0;}
+.ibtn:hover{background:var(--s2);}
+.pageScroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--ib,0px));scrollbar-width:thin;}
+.budgetHero{margin:var(--s16);padding:var(--s20);background:linear-gradient(135deg,#0c1e3a,#0a1830);border:1px solid rgba(75,142,241,.15);border-radius:var(--r20);display:flex;flex-direction:column;gap:var(--s8);}
+.budgetTotalLabel{font-size:var(--f13);color:var(--t2);}
+.budgetTotalAmt{font-family:var(--fd);font-size:var(--f32);font-weight:800;color:var(--green);}
+.budgetTotalSub{font-size:var(--f13);color:var(--t2);}
+.healthBarWrap{margin-top:var(--s8);}
+.healthBarLabels{display:flex;justify-content:space-between;margin-bottom:var(--s8);}
+.healthSpentLbl{font-size:var(--f12);color:rgba(255,255,255,.6);}
+.healthPct{font-size:var(--f12);font-weight:700;color:var(--green);}
+.healthBarTrack{height:6px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;}
+.healthBarFill{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:99px;}
+.paceCard{margin:0 var(--s16) var(--s16);padding:var(--s16);background:var(--s1);border:1px solid var(--b0);border-radius:var(--r14);display:flex;align-items:center;gap:var(--s12);}
+.paceIcon{width:40px;height:40px;background:var(--gdim);border-radius:var(--r10);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.paceInfo{flex:1;}
+.paceTitle{font-family:var(--fd);font-size:var(--f15);font-weight:700;color:var(--green);}
+.paceSub{font-size:var(--f13);color:var(--t2);}
+.paceValue{font-size:var(--f18);color:var(--green);font-weight:800;}
+.secHdr{display:flex;align-items:center;justify-content:space-between;padding:var(--s20) var(--s16) var(--s12);}
+.secTitle{font-family:var(--fd);font-size:var(--f16);font-weight:700;color:var(--t1);}
+.expenseCats{padding:0 var(--s16);display:flex;flex-direction:column;gap:var(--s12);}
+.catItem{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r14);padding:var(--s12) var(--s16);}
+.catRow{display:flex;align-items:center;gap:var(--s8);margin-bottom:var(--s8);}
+.catEmoji{font-size:20px;flex-shrink:0;}
+.catName{flex:1;font-family:var(--fd);font-size:var(--f14,14px);font-weight:700;}
+.catAmt{font-size:var(--f14,14px);font-weight:700;color:var(--t1);font-family:var(--fd);}
+.catTotal{font-size:var(--f12);color:var(--t3);}
+.catBarTrack{height:4px;background:var(--s3);border-radius:99px;overflow:hidden;}
+.catBarFill{height:100%;border-radius:99px;}
+.logForm{padding:0 var(--s16);display:flex;flex-direction:column;gap:var(--s8);}
+.expInput{width:100%;min-height:44px;background:var(--s2);border:1.5px solid var(--b1);border-radius:var(--r10);padding:0 var(--s12);font-size:var(--f15);color:var(--t1);}
+.expInput:focus{border-color:var(--blue);outline:none;}
+.expInput::placeholder{color:var(--t3);}
+.logRow{display:flex;gap:var(--s8);}
+.expAmtInput{flex:1;min-height:44px;background:var(--s2);border:1.5px solid var(--b1);border-radius:var(--r10);padding:0 var(--s12);font-size:var(--f15);color:var(--t1);}
+.expAmtInput:focus{border-color:var(--blue);outline:none;}
+.expAmtInput::placeholder{color:var(--t3);}
+.btnTeal{background:var(--teal);color:var(--bg);border:none;border-radius:var(--r10);padding:0 var(--s20);min-height:44px;font-family:var(--fd);font-weight:700;font-size:var(--f15);cursor:pointer;flex-shrink:0;}
+.btnTeal:hover{opacity:.9;}
+.expenseList{padding:0 var(--s16);display:flex;flex-direction:column;gap:2px;}
+.expenseItem{display:flex;align-items:center;gap:var(--s16);padding:var(--s12) var(--s16);background:var(--s1);border-radius:var(--r10);}
+.expInfo{flex:1;}
+.expDesc{font-size:var(--f14,14px);font-weight:600;color:var(--t1);}
+.expMeta{font-size:var(--f12);color:var(--t3);margin-top:2px;}
+.expAmt{font-family:var(--fd);font-size:var(--f15);font-weight:700;color:var(--red);flex-shrink:0;}

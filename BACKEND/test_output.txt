@@ -1,0 +1,50 @@
+﻿Γùç injected env (20) from planbuddy_v9\.env // tip: Γîÿ multiple files { path: ['.env.local', '.env'] }
+
+[jest-setup] Initializing test database: planbuddy_test
+Γ£ô Connected to planbuddy_test
+
+[jest-setup] Running 30 migrations...
+
+~ 000_initial_schema.sql (already applied)
+~ 001_create_seats_table.sql (already applied)
+~ 002_add_seat_uniqueness_constraint.sql (already applied)
+~ 003_seat_migration_noop.sql (already applied)
+~ 004_correct_seat_migration_chain.sql (already applied)
+~ 020_production_safety_fixes.sql (already applied)
+~ 030_password_reset_tokens.sql (already applied)
+~ 040_missing_production_tables.sql (already applied)
+~ 050_api_versioning_and_indexes.sql (already applied)
+~ 060_production_3_schema.sql (already applied)
+~ 070_v4_production_hardening.sql (already applied)
+~ 080_v5_worker_safety.sql (already applied)
+~ 090_v6_observability.sql (already applied)
+~ 120_financial_integrity_v7.sql (already applied)
+~ 130_v8_production_safety.sql (already applied)
+~ 140_idempotency_state_machine.sql (already applied)
+~ 150_dlq_jobs.sql (already applied)
+~ 155_rename_dlq_to_dead_letter.sql (already applied)
+~ 160_payment_audit_retention (1).sql (already applied)
+~ 160_payment_audit_retention_legacy.sql (already applied)
+~ 165_refunds_table.sql (already applied)
+~ 170_financial_audit_logging.sql (already applied)
+~ 180_webhook_authenticity_convergence.sql (already applied)
+~ 190_payment_integrity_log.sql (already applied)
+~ 196_payment_integrity_log_indexes_fix.sql (already applied)
+~ 197_add_refund_status_constraint.sql (already applied)
+~ 200_webhook_event_execution_log.sql (already applied)
+~ Migration 201_add_refund_status_check.sql (already applied)
+System.Management.Automation.RemoteException
+[jest-setup] FATAL: current transaction is aborted, commands ignored until end of transaction block
+error: current transaction is aborted, commands ignored until end of transaction block
+    at C:\Users\KAKARLA RAJESH\OneDrive\Pictures\planbuddy_v9_backend_productivity\planbuddy_v9\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async setupDatabase (C:\Users\KAKARLA RAJESH\OneDrive\Pictures\planbuddy_v9_backend_productivity\planbuddy_v9\__tests__\setup.js:188:7)
+    at async globalSetup (C:\Users\KAKARLA RAJESH\OneDrive\Pictures\planbuddy_v9_backend_productivity\planbuddy_v9\__tests__\setup.js:202:5)
+    at async C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\core\build\index.js:3161:11
+    at async waitForPromiseWithCleanup (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\transform\build\index.js:134:5)
+    at async ScriptTransformer.requireAndTranspileModule (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\transform\build\index.js:618:16)
+    at async runGlobalHook (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\core\build\index.js:3157:9)
+    at async runJest (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\core\build\index.js:3424:5)
+    at async _run10000 (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\core\build\index.js:1538:5)
+    at async runCLI (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\@jest\core\build\index.js:1439:3)
+    at async Object.run (C:\Users\KAKARLA RAJESH\AppData\Roaming\npm\node_modules\jest\node_modules\jest-cli\build\index.js:656:9)
