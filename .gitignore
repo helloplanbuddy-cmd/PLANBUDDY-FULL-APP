@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # dependencies
 node_modules/
 
@@ -23,3 +24,17 @@ e2e/
 # misc
 *.tsbuildinfo
 .DS_Store
+=======
+node_modules/
+.next/
+.env
+.env.local
+.env.production
+.env.development
+dist/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+node_modules
+>>>>>>> dddf763839af77b137b5653e55b9dcc29c449ba0
