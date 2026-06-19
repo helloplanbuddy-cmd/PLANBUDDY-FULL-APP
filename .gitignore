@@ -9,3 +9,4 @@ build/
 coverage/
 *.log
 *.tsbuildinfo
+node_modules

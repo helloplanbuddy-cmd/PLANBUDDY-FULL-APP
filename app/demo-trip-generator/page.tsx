@@ -2,8 +2,13 @@ import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 
 // Code-split the large DemoTripGenerator (52KB) — lazy load on demand
-const DemoTripGenerator = dynamic(() => import('./DemoTripGenerator'), {
-  ssr: false,
+// Note: Next.js 15 disallows `ssr: false` in Server Components.
+// This page remains a Server Component (for metadata), so we wrap the client-only dynamic import
+// inside a client component.
+import DemoTripGeneratorClient from './DemoTripGeneratorClient';
+
+const DemoTripGenerator = dynamic(() => Promise.resolve(DemoTripGeneratorClient), {
+  // no `ssr: false` here; the actual component is client-only
   loading: () => (
     <div style={{
       position: 'absolute', inset: 0,
@@ -21,6 +26,7 @@ const DemoTripGenerator = dynamic(() => import('./DemoTripGenerator'), {
     </div>
   ),
 });
+
 
 export const metadata: Metadata = {
   title: 'Free AI Trip Planner — Generate Your India Itinerary in Minutes',

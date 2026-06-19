@@ -70,7 +70,11 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    return new Response(JSON.stringify(data), {
+      status: res.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
 
   } catch (err) {
     await captureException(err, { route, requestId });

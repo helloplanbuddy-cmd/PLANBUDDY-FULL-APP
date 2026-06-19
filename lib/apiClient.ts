@@ -72,16 +72,30 @@ function backoffMs(attempt: number): number {
  * This is a lazy import to avoid circular dependencies at module load time.
  */
 function getAuthToken(): string | undefined {
+  // This transport layer is intended for browser usage.
+  // If invoked during SSR, there is no persisted auth token to read.
+  if (typeof window === 'undefined') return undefined;
+
+  // IMPORTANT:
+  // `apiClient.ts` must not use `require()` because the repo enforces
+  // `@typescript-eslint/no-require-imports`.
+  //
+  // We read the token from the same persisted storage key used by
+  // Zustand's `persist` middleware.
   try {
-    // Dynamic import of store to avoid circular dependency
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useAppStore } = require('@/store/appStore');
-    const state = useAppStore.getState?.();
-    return state?.auth?.token;
+    const raw = window.localStorage.getItem('planbuddy-v3-store');
+    if (!raw) return undefined;
+
+    const parsed = JSON.parse(raw) as { state?: { auth?: { token?: unknown } } };
+    const token = parsed?.state?.auth?.token;
+    return typeof token === 'string' ? token : undefined;
   } catch {
     return undefined;
   }
 }
+
+
+
 
 // ── Core Fetch ─────────────────────────────────────────────
 
