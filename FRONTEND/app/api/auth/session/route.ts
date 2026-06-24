@@ -52,8 +52,19 @@ export async function POST(req: NextRequest) {
     getEnv();
 
     // Proxy to backend refresh route
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/refresh`, { method: 'POST', headers: { cookie: req.headers.get('cookie') || '' } });
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!base) {
+      return apiError(
+        'Missing NEXT_PUBLIC_API_BASE_URL required for refresh proxy',
+        500
+      );
+    }
+
+    const res = await fetch(`${base}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { cookie: req.headers.get('cookie') || '' },
+    });
+
     const data = await res.json();
     const out = NextResponse.json(data, { status: res.status, headers: SECURITY_HEADERS });
     const setCookies = res.headers.get('set-cookie');

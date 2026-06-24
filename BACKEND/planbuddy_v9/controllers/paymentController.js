@@ -272,7 +272,7 @@ exports.getPaymentStatus = async (req, res, next) => {
 
     const result = await db.query(
       `SELECT
-         p.id, p.razorpay_payment_id, p.razorpay_order_id,
+         p.id,
          p.amount, p.currency, p.status, p.created_at,
          b.id           AS booking_id,
          b.status       AS booking_status,
@@ -295,7 +295,24 @@ exports.getPaymentStatus = async (req, res, next) => {
       });
     }
 
-    return res.json({ success: true, data: { payment: result.rows[0] } });
+    const row = result.rows[0];
+
+    // Response shaping: never leak provider identifiers (e.g., razorpay_payment_id/order_id)
+    // even if they appear in the DB result.
+    const payment = {
+      id: row.id,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      created_at: row.created_at,
+      booking_id: row.booking_id,
+      booking_status: row.booking_status,
+      payment_status: row.payment_status,
+      trip_title: row.trip_title,
+      trip_location: row.trip_location,
+    };
+
+    return res.json({ success: true, data: { payment } });
   } catch (err) {
     next(err);
   }

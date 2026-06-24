@@ -79,28 +79,28 @@ exports.getBooking = async (req, res, next) => {
     const { bookingId } = req.params;
     const userId = req.user.id;
 
+    // Ownership must be enforced in the read query. Do not fetch by id only.
     const result = await db.query(
       `SELECT
-         b.*,
+         b.id, b.status, b.payment_status, b.group_size, b.slot_id,
+         b.total_amount, b.travel_date, b.created_at,
+         b.expires_at, b.trip_snapshot,
          t.title        AS trip_title,
          t.location     AS trip_location,
          t.cover_image  AS trip_image,
-         t.description  AS trip_description,
-         u.name         AS user_name,
-         u.email        AS user_email,
-         p.razorpay_payment_id,
          p.amount       AS payment_amount,
          p.status       AS payment_capture_status,
          p.created_at   AS payment_created_at
        FROM bookings b
        LEFT JOIN trips    t ON b.trip_id    = t.id
-       LEFT JOIN users    u ON b.user_id    = u.id
        LEFT JOIN payments p ON p.booking_id = b.id
-       WHERE b.id = $1`,
-      [bookingId]
+       WHERE b.id = $1
+         AND b.user_id = $2`,
+      [bookingId, userId]
     );
 
     if (result.rows.length === 0) {
+      // Enumeration-safe: 404 when ownership fails
       return res.status(404).json({
         success: false,
         code: 'BOOKING_NOT_FOUND',
@@ -109,14 +109,6 @@ exports.getBooking = async (req, res, next) => {
     }
 
     const booking = result.rows[0];
-
-    if (booking.user_id !== userId && req.user.role !== 'admin' && req.user.role !== 'agency') {
-      return res.status(403).json({
-        success: false,
-        code: 'ACCESS_DENIED',
-        message: 'Access denied',
-      });
-    }
 
     res.json({ success: true, data: { booking } });
   } catch (err) {

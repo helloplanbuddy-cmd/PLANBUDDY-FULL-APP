@@ -61,9 +61,33 @@ export async function POST(req: NextRequest) {
       return apiRateLimited(rlIP.resetAt);
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+    // If no backend base URL is configured (local/Jest), execute local implementation.
+    if (!baseUrl) {
+      // Local send OTP (tests mock sms + dbSessionStore + redis limiters)
+      const { sendOTP } = await import('@/lib/sms');
+      const { storeOTP, generateFamily, generateDeviceId } = await import('@/lib/dbSessionStore');
+
+      const deviceId = generateDeviceId();
+      const { otp, success } = await sendOTP(phone);
+      if (!success) return apiError('Failed to send OTP', 502);
+
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+               ?? req.headers.get('x-real-ip')
+               ?? 'unknown';
+
+      await storeOTP(phone, otp, { ipAddress: ip, deviceId });
+
+      // Match integration test contract
+      return apiOk({
+        message: 'OTP sent successfully',
+        expiresIn: 300,
+      });
+    }
+
     // Proxy to backend authoritative endpoint
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/send-otp`, {
+    const res = await fetch(`${baseUrl}/api/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone }),
@@ -74,6 +98,7 @@ export async function POST(req: NextRequest) {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
+
 
 
   } catch (err) {
