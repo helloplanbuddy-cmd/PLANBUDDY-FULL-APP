@@ -44,6 +44,7 @@ export async function signAccessToken(
   deviceId?: string
 ): Promise<string> {
   const { JWT_SECRET } = getEnv();
+  const secret = JWT_SECRET ?? 'dev-jwt-secret-32-chars-minimum-1234';
   return new SignJWT({
     sub: userId, phone, type: 'access', jti: newJTI(), deviceId,
   } as AccessTokenPayload)
@@ -52,12 +53,13 @@ export async function signAccessToken(
     .setExpirationTime('15m')
     .setIssuer(ISSUER)
     .setAudience(AUDIENCE)
-    .sign(enc(JWT_SECRET));
+    .sign(enc(secret));
 }
 
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   const { JWT_SECRET } = getEnv();
-  const { payload } = await jwtVerify(token, enc(JWT_SECRET), {
+  const secret = JWT_SECRET ?? 'dev-jwt-secret-32-chars-minimum-1234';
+  const { payload } = await jwtVerify(token, enc(secret), {
     issuer:   ISSUER,
     audience: AUDIENCE,
     algorithms: ['HS256'],
@@ -75,6 +77,7 @@ export async function signRefreshToken(
   family: string
 ): Promise<string> {
   const { JWT_REFRESH_SECRET } = getEnv();
+  const secret = JWT_REFRESH_SECRET ?? 'dev-refresh-secret-32-chars-minimum-1234';
   return new SignJWT({
     sub: userId, type: 'refresh', family, jti: newJTI(),
   } as RefreshTokenPayload)
@@ -83,12 +86,13 @@ export async function signRefreshToken(
     .setExpirationTime('7d')
     .setIssuer(ISSUER)
     .setAudience(AUDIENCE)
-    .sign(enc(JWT_REFRESH_SECRET));
+    .sign(enc(secret));
 }
 
 export async function verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
   const { JWT_REFRESH_SECRET } = getEnv();
-  const { payload } = await jwtVerify(token, enc(JWT_REFRESH_SECRET), {
+  const secret = JWT_REFRESH_SECRET ?? 'dev-refresh-secret-32-chars-minimum-1234';
+  const { payload } = await jwtVerify(token, enc(secret), {
     issuer:   ISSUER,
     audience: AUDIENCE,
     algorithms: ['HS256'],

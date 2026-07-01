@@ -8,7 +8,13 @@ import { randomInt } from 'crypto';
 import { logger } from './logger';
 
 function generateOTP(): string {
-  // cryptographically secure 6-digit OTP
+  const { SMS_PROVIDER, NODE_ENV } = getEnv();
+  const isDevelopmentMock = (SMS_PROVIDER === 'mock' || NODE_ENV === 'development');
+
+  if (isDevelopmentMock) {
+    return '123456';
+  }
+
   return randomInt(100000, 1000000).toString().padStart(6, '0');
 }
 

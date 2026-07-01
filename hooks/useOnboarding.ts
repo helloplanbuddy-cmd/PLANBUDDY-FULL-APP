@@ -29,16 +29,15 @@ export function useOnboarding() {
       // localStorage unavailable in some privacy modes
     }
 
-    // Phase 2E Fix D: only mark onboarding complete — never overwrite user selections.
-    // Previous versions reset all preference fields here, which would erase any
-    // slide-level choices added in the future. Only the completion flag is written.
     updatePreferences({ onboardingCompleted: true });
 
-    // Fix #5: track onboarding_completed
-    ClientAnalytics.track('onboarding_completed');
+    try {
+      ClientAnalytics.track('onboarding_completed');
+    } catch {
+      // analytics failures must not block navigation
+    }
 
-    // Route change: Onboarding → Demo Trip Generator (not directly to login)
-    router.push('/demo-trip-generator');
+    router.replace('/demo-trip-generator');
   }, [router, updatePreferences]);
 
   const skip = useCallback(() => {

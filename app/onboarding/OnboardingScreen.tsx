@@ -18,24 +18,31 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { currentSlide, totalSlides, isLastSlide, slide, next, skip } = useOnboarding();
 
-  // "Already have an account" — bypass demo, go straight to login
   const goToLogin = useCallback(() => {
     try {
-      // Mark onboarding done so splash doesn't loop back here
       localStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, 'true');
-      // Also mark demo seen so splash skips demo and goes to /auth/phone next time
       localStorage.setItem(STORAGE_KEYS.DEMO_SEEN, 'true');
-    } catch { /* ignore */ }
-    ClientAnalytics.track('onboarding_completed', { via: 'login_shortcut' });
-    router.push('/auth/phone');
+    } catch {
+      // ignore storage failures and continue with navigation
+    }
+
+    try {
+      ClientAnalytics.track('onboarding_completed', { via: 'login_shortcut' });
+    } catch {
+      // analytics failures must not block navigation
+    }
+
+    router.replace('/auth/phone');
   }, [router]);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const prevSlideRef = useRef(currentSlide);
 
-  // Fix #5: track onboarding_started on first mount
   useEffect(() => {
-    ClientAnalytics.track('onboarding_started');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      ClientAnalytics.track('onboarding_started');
+    } catch {
+      // analytics failures must not break onboarding
+    }
   }, []);
 
   useEffect(() => {

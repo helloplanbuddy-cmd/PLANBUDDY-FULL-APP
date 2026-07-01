@@ -6,25 +6,31 @@
 // ============================================================
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getEnv }                     from '@/lib/env';
-import { VerifyOTPSchema }            from '@/lib/schemas';
-
-import { limitVerifyOTP }             from '@/lib/redisRateLimit';
+import { getEnv } from '@/lib/env';
+import { VerifyOTPSchema } from '@/lib/schemas';
+import { limitVerifyOTP } from '@/lib/redisRateLimit';
 import { apiError, apiRateLimited, safeParseBody, SECURITY_HEADERS } from '@/lib/apiHelpers';
-import { Analytics }                  from '@/lib/analytics';
-import { captureException }           from '@/lib/monitoring';
-import { createHash }                 from 'crypto';
+import { Analytics } from '@/lib/analytics';
+import { captureException } from '@/lib/monitoring';
 import { logger, generateRequestId, logApiRequest, logApiResponse, logAuthEvent } from '@/lib/logger';
-import { trace }                      from '@/lib/telemetry';
-import { validateCSRF }               from '@/lib/csrf';
+import { signAccessToken, signRefreshToken } from '@/lib/jwt';
+import { validateCSRF } from '@/lib/csrf';
+import {
+  verifyOTPHash,
+  getOrCreateUser,
+  createDeviceSession,
+  storeRefreshFamily,
+  generateFamily,
+  generateDeviceId,
+} from '@/lib/dbSessionStore';
 
 export const runtime = 'nodejs';
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 export async function POST(req: NextRequest) {
   const requestId = generateRequestId();
-  const start     = Date.now();
-  const route     = '/api/auth/verify-otp';
+  const start = Date.now();
+  const route = '/api/auth/verify-otp';
 
   logApiRequest(requestId, 'POST', route);
 
@@ -49,28 +55,66 @@ export async function POST(req: NextRequest) {
       return apiRateLimited(rl.resetAt);
     }
 
-    // Proxy verification to backend authoritative endpoint
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp }),
-    });
-
-    const data = await res.json();
-
-    // Mirror backend response (including cookies set by backend)
-    const out = NextResponse.json(data, { status: res.status, headers: SECURITY_HEADERS });
-
-    const setCookies = res.headers.get('set-cookie');
-    if (setCookies) {
-      // In Node fetch, multiple Set-Cookie might be concatenated with , so best-effort
-      out.headers.append('Set-Cookie', setCookies);
+    const verifyResult = await verifyOTPHash(phone, otp);
+    if (!verifyResult.valid) {
+      if (verifyResult.locked) {
+        return apiError('Too many failed attempts. Request a new OTP.', 429);
+      }
+      return apiError('Invalid or expired OTP', 401);
     }
 
-    logApiResponse(requestId, route, res.status, Date.now() - start);
-    return out;
+    const user = await getOrCreateUser(phone);
+    const deviceId = generateDeviceId();
+    const sessionId = await createDeviceSession(user.id, {
+      deviceId,
+      deviceName: 'web',
+      deviceType: 'desktop',
+      ipAddress: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        ?? req.headers.get('x-real-ip')
+        ?? 'unknown',
+      userAgent: req.headers.get('user-agent') ?? null,
+    });
+    const family = generateFamily();
+    const accessToken = await signAccessToken(user.id, user.phone, deviceId);
+    const refreshToken = await signRefreshToken(user.id, family);
+    await storeRefreshFamily(family, user.id, refreshToken, sessionId);
 
+    await Analytics.otpVerified(user.id);
+    logAuthEvent('otp_verified', user.id, { phone: phone.slice(0, 4) + '****' });
+
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: 'OTP verified successfully',
+        accessToken,
+        userId: user.id,
+        phone: user.phone,
+      },
+      { status: 200, headers: SECURITY_HEADERS }
+    );
+
+    const accessCookie = [
+      '__access=' + accessToken,
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Strict',
+      'Max-Age=900',
+      IS_PROD ? 'Secure' : '',
+    ].filter(Boolean).join('; ');
+    const refreshCookie = [
+      '__refresh=' + refreshToken,
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Strict',
+      'Max-Age=604800',
+      IS_PROD ? 'Secure' : '',
+    ].filter(Boolean).join('; ');
+
+    response.headers.append('Set-Cookie', accessCookie);
+    response.headers.append('Set-Cookie', refreshCookie);
+
+    logApiResponse(requestId, route, 200, Date.now() - start);
+    return response;
   } catch (err) {
     await captureException(err, { route, requestId });
     logger.error({ requestId, err }, 'verify-otp handler error');

@@ -176,8 +176,9 @@ ul { list-style: none; }
   margin: 0 auto;
   background: var(--bg);
   overflow: hidden;
-  contain: layout;
+  isolation: isolate;
 }
+
 
 @media (min-width: 480px) {
   body { background: #03070f; }

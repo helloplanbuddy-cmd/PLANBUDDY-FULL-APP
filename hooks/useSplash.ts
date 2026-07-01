@@ -15,6 +15,23 @@ interface UseSplashOptions {
   fadeOutOffset?: number;
 }
 
+interface StorageLike {
+  getItem(key: string): string | null;
+}
+
+export function resolveSplashDestination(storage: StorageLike = window.localStorage): string {
+  try {
+    const onboardingDone = storage.getItem(STORAGE_KEYS.ONBOARDING_DONE) === 'true';
+    const demoSeen = storage.getItem(STORAGE_KEYS.DEMO_SEEN) === 'true';
+
+    if (!onboardingDone) return '/onboarding';
+    if (!demoSeen) return '/demo-trip-generator';
+    return '/auth/phone';
+  } catch {
+    return '/onboarding';
+  }
+}
+
 export function useSplash({
   duration = 2200,
   fadeOutOffset = 400,
@@ -25,32 +42,20 @@ export function useSplash({
 
   useEffect(() => {
     let fadeTimer: ReturnType<typeof setTimeout>;
-    let navTimer:  ReturnType<typeof setTimeout>;
+    let navTimer: ReturnType<typeof setTimeout>;
 
-    const destination = (() => {
-      try {
-        const onboardingDone = localStorage.getItem(STORAGE_KEYS.ONBOARDING_DONE) === 'true';
-        const demoSeen       = localStorage.getItem(STORAGE_KEYS.DEMO_SEEN)       === 'true';
-
-        if (!onboardingDone) return '/onboarding';          // First ever launch
-        if (!demoSeen)       return '/demo-trip-generator'; // Saw onboarding, not demo yet
-        return '/auth/phone';                               // Saw demo → go to login
-        // Note: middleware redirects /auth/* → /dashboard if access token cookie exists
-      } catch {
-        return '/onboarding';
-      }
-    })();
+    const destination = resolveSplashDestination(window.localStorage);
 
     fadeTimer = setTimeout(() => {
       setIsFadingOut(true);
-    }, duration - fadeOutOffset);
+    }, Math.max(0, duration - fadeOutOffset));
+
+    const NAV_BUFFER_MS = 120;
 
     navTimer = setTimeout(() => {
       setIsVisible(false);
-      // Use replace() so splash is removed from history stack.
-      // Browser back from Onboarding/Demo should not return to splash.
       router.replace(destination);
-    }, duration);
+    }, duration + NAV_BUFFER_MS);
 
     return () => {
       clearTimeout(fadeTimer);

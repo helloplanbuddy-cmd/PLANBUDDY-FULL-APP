@@ -7,13 +7,11 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getEnv } from '@/lib/env';
-import { requireAuth }      from '@/lib/authMiddleware';
+import { verifyAccessToken, signAccessToken, verifyRefreshToken } from '@/lib/jwt';
 import { apiOk, apiError, SECURITY_HEADERS } from '@/lib/apiHelpers';
-import { Analytics }        from '@/lib/analytics';
 import { captureException } from '@/lib/monitoring';
-import { logger, generateRequestId, logApiRequest, logApiResponse, logAuthEvent } from '@/lib/logger';
-import { trace }            from '@/lib/telemetry';
-
+import { logger, generateRequestId, logApiRequest, logApiResponse } from '@/lib/logger';
+import { getUserById } from '@/lib/dbSessionStore';
 
 export const runtime = 'nodejs';
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -26,16 +24,17 @@ export async function GET(req: NextRequest) {
   try {
     getEnv();
 
-    // Proxy to backend
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/session`, { method: 'GET', headers: { cookie: req.headers.get('cookie') || '' } });
-    const data = await res.json();
-    const out = NextResponse.json(data, { status: res.status, headers: SECURITY_HEADERS });
-    const setCookies = res.headers.get('set-cookie');
-    if (setCookies) out.headers.append('Set-Cookie', setCookies);
-    logApiResponse(requestId, '/api/auth/session', res.status, Date.now() - start);
-    return out;
+    const token = req.cookies.get('__access')?.value;
+    if (!token) {
+      return apiOk({ authenticated: false });
+    }
 
+    try {
+      const payload = await verifyAccessToken(token);
+      return apiOk({ authenticated: true, userId: payload.sub, phone: payload.phone, accessToken: token });
+    } catch {
+      return apiOk({ authenticated: false });
+    }
   } catch (err) {
     await captureException(err, { route: 'GET /api/auth/session', requestId });
     logger.error({ requestId, err }, 'session GET error');
@@ -51,16 +50,28 @@ export async function POST(req: NextRequest) {
   try {
     getEnv();
 
-    // Proxy to backend refresh route
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/refresh`, { method: 'POST', headers: { cookie: req.headers.get('cookie') || '' } });
-    const data = await res.json();
-    const out = NextResponse.json(data, { status: res.status, headers: SECURITY_HEADERS });
-    const setCookies = res.headers.get('set-cookie');
-    if (setCookies) out.headers.append('Set-Cookie', setCookies);
-    logApiResponse(requestId, '/api/auth/session', res.status, Date.now() - start);
-    return out;
+    const refreshToken = req.cookies.get('__refresh')?.value;
+    if (!refreshToken) {
+      return apiOk({ authenticated: false });
+    }
 
+    try {
+      const payload = await verifyRefreshToken(refreshToken);
+      const user = await getUserById(payload.sub);
+      if (!user) {
+        return apiOk({ authenticated: false });
+      }
+      const accessToken = await signAccessToken(user.id, user.phone);
+      const response = NextResponse.json(
+        { authenticated: true, userId: user.id, phone: user.phone, accessToken },
+        { status: 200, headers: SECURITY_HEADERS }
+      );
+      response.headers.append('Set-Cookie', `__access=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900${IS_PROD ? '; Secure' : ''}`);
+      logApiResponse(requestId, '/api/auth/session', 200, Date.now() - start);
+      return response;
+    } catch {
+      return apiOk({ authenticated: false });
+    }
   } catch (err) {
     await captureException(err, { route: 'POST /api/auth/session', requestId });
     logger.error({ requestId, err }, 'session POST error');

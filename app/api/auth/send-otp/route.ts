@@ -6,29 +6,29 @@
 // ============================================================
 
 import { type NextRequest } from 'next/server';
-import { getEnv }                     from '@/lib/env';
-import { SendOTPSchema }              from '@/lib/schemas';
+import { getEnv } from '@/lib/env';
+import { SendOTPSchema } from '@/lib/schemas';
 import { limitSendOTP, limitSendOTPByIP } from '@/lib/redisRateLimit';
 import { apiOk, apiError, apiRateLimited, safeParseBody } from '@/lib/apiHelpers';
-import { Analytics }                  from '@/lib/analytics';
-import { captureException }           from '@/lib/monitoring';
-import { logger, generateRequestId, logApiRequest, logApiResponse, logAuthEvent } from '@/lib/logger';
-import { trace }                      from '@/lib/telemetry';
-import { validateCSRF }               from '@/lib/csrf';
+import { Analytics } from '@/lib/analytics';
+import { captureException } from '@/lib/monitoring';
+import { logger, generateRequestId, logApiRequest, logApiResponse } from '@/lib/logger';
+import { validateCSRF } from '@/lib/csrf';
+import { sendOTP } from '@/lib/sms';
+import { storeOTP, generateDeviceId } from '@/lib/dbSessionStore';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   const requestId = generateRequestId();
-  const start     = Date.now();
-  const route     = '/api/auth/send-otp';
+  const start = Date.now();
+  const route = '/api/auth/send-otp';
 
   logApiRequest(requestId, 'POST', route);
 
   try {
     getEnv();
 
-    // CSRF check
     const csrfError = validateCSRF(req);
     if (csrfError) {
       logApiResponse(requestId, route, 403, Date.now() - start);
@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
 
     const { phone } = result.data;
 
-    // Per-phone rate limit
     const rlPhone = await limitSendOTP(phone);
     if (!rlPhone.allowed) {
       await Analytics.rateLimitHit('anon', 'send-otp');
@@ -51,31 +50,27 @@ export async function POST(req: NextRequest) {
       return apiRateLimited(rlPhone.resetAt);
     }
 
-    // Per-IP rate limit
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-             ?? req.headers.get('x-real-ip')
-             ?? 'unknown';
+      ?? req.headers.get('x-real-ip')
+      ?? 'unknown';
     const rlIP = await limitSendOTPByIP(ip);
     if (!rlIP.allowed) {
       logApiResponse(requestId, route, 429, Date.now() - start);
       return apiRateLimited(rlIP.resetAt);
     }
 
-    // Proxy to backend authoritative endpoint
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const res = await fetch(`${base}/api/auth/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    });
+    const deviceId = generateDeviceId();
+    const { otp, success } = await sendOTP(phone);
+    if (!success) {
+      logger.warn({ requestId, phone: phone.slice(0, 4) + '****' }, 'OTP delivery failed');
+      return apiError('Failed to send OTP', 502);
+    }
 
-    const data = await res.json();
-    return new Response(JSON.stringify(data), {
-      status: res.status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    await storeOTP(phone, otp, { ipAddress: ip, deviceId });
+    await Analytics.otpSent(phone);
 
-
+    logApiResponse(requestId, route, 200, Date.now() - start);
+    return apiOk({ success: true, message: 'OTP sent successfully' });
   } catch (err) {
     await captureException(err, { route, requestId });
     logger.error({ requestId, err }, 'send-otp handler error');

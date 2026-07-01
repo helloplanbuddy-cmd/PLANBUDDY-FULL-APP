@@ -16,11 +16,13 @@ interface SplashScreenProps {
 export default function SplashScreen({ duration = 2200 }: SplashScreenProps) {
   const { isFadingOut } = useSplash({ duration, fadeOutOffset: 400 });
 
-  // Phase 2E: fire app_opened + splash_viewed on first paint
   useEffect(() => {
-    ClientAnalytics.track('app_opened');
-    ClientAnalytics.track('splash_viewed');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      ClientAnalytics.track('app_opened');
+      ClientAnalytics.track('splash_viewed');
+    } catch {
+      // analytics failures must not block navigation
+    }
   }, []);
 
   return (

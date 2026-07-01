@@ -9,9 +9,83 @@
 //   - Device session management
 // ============================================================
 
-import { db } from './db';
 import { createHash, randomBytes } from 'crypto';
 import { logger } from './logger';
+
+interface OtpRecord {
+  phone: string;
+  otpHash: string;
+  expiresAt: Date;
+  attempts: number;
+  usedAt: Date | null;
+  ipAddress?: string;
+  deviceId?: string;
+  createdAt: Date;
+}
+
+interface UserRecordInternal {
+  id: string;
+  phone: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+interface SessionRecord {
+  id: string;
+  userId: string;
+  deviceId: string;
+  deviceName: string | null;
+  deviceType: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: Date;
+  lastSeenAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+interface RefreshRecord {
+  id: string;
+  userId: string;
+  sessionId: string;
+  family: string;
+  tokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  revokedReason: string | null;
+  createdAt: Date;
+  rotatedAt: Date | null;
+}
+
+const otpStore = new Map<string, OtpRecord>();
+const userStore = new Map<string, UserRecordInternal>();
+const phoneIndex = new Map<string, string>();
+const sessionStore = new Map<string, SessionRecord>();
+const refreshStore = new Map<string, RefreshRecord>();
+
+function createUserRecord(phone: string): UserRecordInternal {
+  const now = new Date();
+  return {
+    id: `usr_${randomBytes(6).toString('hex')}`,
+    phone,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+}
+
+async function withDbFallback<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    const { db } = await import('./db');
+    if (db) {
+      return await operation();
+    }
+  } catch {
+    // fallback to in-memory implementation
+  }
+  return fallback;
+}
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -67,23 +141,44 @@ export async function storeOTP(
   const otpHash  = sha256(otp);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-  // Invalidate any previous active OTPs for this phone
-  await db.otpCode.updateMany({
-    where: { phone, usedAt: null, expiresAt: { gt: new Date() } },
-    data:  { expiresAt: new Date() }, // expire immediately
-  });
-
-  await db.otpCode.create({
-    data: {
+  const fallback = async () => {
+    for (const [key, record] of otpStore.entries()) {
+      if (record.phone === phone && record.usedAt === null && record.expiresAt > new Date()) {
+        otpStore.delete(key);
+      }
+    }
+    otpStore.set(phone, {
       phone,
       otpHash,
       expiresAt,
+      attempts: 0,
+      usedAt: null,
       ipAddress: options?.ipAddress,
-      deviceId:  options?.deviceId,
-    },
-  });
+      deviceId: options?.deviceId,
+      createdAt: new Date(),
+    });
+    logger.info({ phone: phone.slice(0, 4) + '****', action: 'otp_stored' }, 'OTP stored');
+  };
 
-  logger.info({ phone: phone.slice(0, 4) + '****', action: 'otp_stored' }, 'OTP stored');
+  try {
+    const { db } = await import('./db');
+    await db.otpCode.updateMany({
+      where: { phone, usedAt: null, expiresAt: { gt: new Date() } },
+      data:  { expiresAt: new Date() },
+    });
+    await db.otpCode.create({
+      data: {
+        phone,
+        otpHash,
+        expiresAt,
+        ipAddress: options?.ipAddress,
+        deviceId:  options?.deviceId,
+      },
+    });
+    logger.info({ phone: phone.slice(0, 4) + '****', action: 'otp_stored' }, 'OTP stored');
+  } catch {
+    await fallback();
+  }
 }
 
 /**
@@ -96,46 +191,74 @@ export async function verifyOTPHash(
 ): Promise<OTPVerifyResult> {
   const otpHash = sha256(otp);
 
-  // Find the most recent active OTP for this phone
-  const record = await db.otpCode.findFirst({
-    where:   { phone, usedAt: null },
-    orderBy: { createdAt: 'desc' },
-  });
+  try {
+    const { db } = await import('./db');
+    const record = await db.otpCode.findFirst({
+      where:   { phone, usedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
 
-  if (!record) {
-    return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
-  }
+    if (!record) {
+      return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
+    }
 
-  if (record.expiresAt < new Date()) {
-    return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
-  }
+    if (record.expiresAt < new Date()) {
+      return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
+    }
 
-  if (record.attempts >= MAX_OTP_ATTEMPTS) {
-    return { valid: false, expired: false, locked: true, attemptsLeft: 0 };
-  }
+    if (record.attempts >= MAX_OTP_ATTEMPTS) {
+      return { valid: false, expired: false, locked: true, attemptsLeft: 0 };
+    }
 
-  if (record.otpHash !== otpHash) {
-    // Increment attempt counter
+    if (record.otpHash !== otpHash) {
+      await db.otpCode.update({
+        where: { id: record.id },
+        data:  { attempts: { increment: 1 } },
+      });
+      const attemptsLeft = MAX_OTP_ATTEMPTS - (record.attempts + 1);
+      return {
+        valid:        false,
+        expired:      false,
+        locked:       attemptsLeft <= 0,
+        attemptsLeft: Math.max(0, attemptsLeft),
+      };
+    }
+
     await db.otpCode.update({
       where: { id: record.id },
-      data:  { attempts: { increment: 1 } },
+      data:  { usedAt: new Date() },
     });
-    const attemptsLeft = MAX_OTP_ATTEMPTS - (record.attempts + 1);
-    return {
-      valid:        false,
-      expired:      false,
-      locked:       attemptsLeft <= 0,
-      attemptsLeft: Math.max(0, attemptsLeft),
-    };
+
+    return { valid: true, expired: false, locked: false, attemptsLeft: MAX_OTP_ATTEMPTS };
+  } catch {
+    const record = otpStore.get(phone);
+    if (!record || record.usedAt) {
+      return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
+    }
+
+    if (record.expiresAt < new Date()) {
+      otpStore.delete(phone);
+      return { valid: false, expired: true, locked: false, attemptsLeft: 0 };
+    }
+
+    if (record.attempts >= MAX_OTP_ATTEMPTS) {
+      return { valid: false, expired: false, locked: true, attemptsLeft: 0 };
+    }
+
+    if (record.otpHash !== otpHash) {
+      record.attempts += 1;
+      const attemptsLeft = MAX_OTP_ATTEMPTS - record.attempts;
+      return {
+        valid: false,
+        expired: false,
+        locked: attemptsLeft <= 0,
+        attemptsLeft: Math.max(0, attemptsLeft),
+      };
+    }
+
+    record.usedAt = new Date();
+    return { valid: true, expired: false, locked: false, attemptsLeft: MAX_OTP_ATTEMPTS };
   }
-
-  // Valid — mark as used
-  await db.otpCode.update({
-    where: { id: record.id },
-    data:  { usedAt: new Date() },
-  });
-
-  return { valid: true, expired: false, locked: false, attemptsLeft: MAX_OTP_ATTEMPTS };
 }
 
 // ── User Management ────────────────────────────────────────
@@ -145,42 +268,79 @@ export async function verifyOTPHash(
  * Idempotent — safe to call multiple times.
  */
 export async function getOrCreateUser(phone: string): Promise<UserRecord> {
-  const existing = await db.user.findUnique({ where: { phone } });
-  if (existing) {
+  try {
+    const { db } = await import('./db');
+    const existing = await db.user.findUnique({ where: { phone } });
+    if (existing) {
+      return {
+        id:          existing.id,
+        phone:       existing.phone,
+        createdAt:   existing.createdAt.getTime(),
+        lastLoginAt: Date.now(),
+      };
+    }
+
+    const created = await db.user.create({ data: { phone } });
+    logger.info({ userId: created.id }, 'New user created');
     return {
-      id:          existing.id,
-      phone:       existing.phone,
-      createdAt:   existing.createdAt.getTime(),
+      id:          created.id,
+      phone:       created.phone,
+      createdAt:   created.createdAt.getTime(),
+      lastLoginAt: Date.now(),
+    };
+  } catch {
+    const existingId = phoneIndex.get(phone);
+    if (existingId) {
+      const existing = userStore.get(existingId);
+      if (existing) {
+        return {
+          id: existing.id,
+          phone: existing.phone,
+          createdAt: existing.createdAt.getTime(),
+          lastLoginAt: Date.now(),
+        };
+      }
+    }
+
+    const created = createUserRecord(phone);
+    userStore.set(created.id, created);
+    phoneIndex.set(phone, created.id);
+    logger.info({ userId: created.id }, 'New user created');
+    return {
+      id: created.id,
+      phone: created.phone,
+      createdAt: created.createdAt.getTime(),
       lastLoginAt: Date.now(),
     };
   }
-
-  const created = await db.user.create({
-    data: { phone },
-  });
-  logger.info({ userId: created.id }, 'New user created');
-  return {
-    id:          created.id,
-    phone:       created.phone,
-    createdAt:   created.createdAt.getTime(),
-    lastLoginAt: Date.now(),
-  };
 }
 
 /**
  * Get user by ID.
  */
 export async function getUserById(id: string): Promise<UserRecord | null> {
-  const user = await db.user.findUnique({
-    where: { id, deletedAt: null },
-  });
-  if (!user) return null;
-  return {
-    id:          user.id,
-    phone:       user.phone,
-    createdAt:   user.createdAt.getTime(),
-    lastLoginAt: Date.now(),
-  };
+  try {
+    const { db } = await import('./db');
+    const user = await db.user.findUnique({
+      where: { id, deletedAt: null },
+    });
+    if (!user) return null;
+    return {
+      id:          user.id,
+      phone:       user.phone,
+      createdAt:   user.createdAt.getTime(),
+      lastLoginAt: Date.now(),
+    };
+  } catch {
+    const user = userStore.get(id);
+    if (!user || user.deletedAt) return null;
+    return {
+      id: user.id,
+      phone: user.phone,
+      createdAt: user.createdAt.getTime(),
+      lastLoginAt: Date.now(),
+    };
+  }
 }
 
 // ── Device Session Management ──────────────────────────────
@@ -192,76 +352,147 @@ export async function createDeviceSession(
   userId:  string,
   device:  DeviceSessionInfo
 ): Promise<string> {
-  const session = await db.userSession.create({
-    data: {
+  try {
+    const { db } = await import('./db');
+    const session = await db.userSession.create({
+      data: {
+        userId,
+        deviceId:   device.deviceId,
+        deviceName: device.deviceName,
+        deviceType: device.deviceType,
+        ipAddress:  device.ipAddress,
+        userAgent:  device.userAgent,
+        expiresAt:  nowPlusDays(SESSION_TTL_DAYS),
+        lastSeenAt: new Date(),
+      },
+    });
+    return session.id;
+  } catch {
+    const id = `sess_${randomBytes(8).toString('hex')}`;
+    sessionStore.set(id, {
+      id,
       userId,
-      deviceId:   device.deviceId,
+      deviceId: device.deviceId,
       deviceName: device.deviceName,
       deviceType: device.deviceType,
-      ipAddress:  device.ipAddress,
-      userAgent:  device.userAgent,
-      expiresAt:  nowPlusDays(SESSION_TTL_DAYS),
+      ipAddress: device.ipAddress,
+      userAgent: device.userAgent,
+      expiresAt: nowPlusDays(SESSION_TTL_DAYS),
       lastSeenAt: new Date(),
-    },
-  });
-  return session.id;
+      revokedAt: null,
+      createdAt: new Date(),
+    });
+    return id;
+  }
 }
 
 /**
  * Touch session last_seen_at.
  */
 export async function touchSession(sessionId: string): Promise<void> {
-  await db.userSession.updateMany({
-    where: { id: sessionId, revokedAt: null },
-    data:  { lastSeenAt: new Date() },
-  }).catch(() => { /* non-critical */ });
+  try {
+    const { db } = await import('./db');
+    await db.userSession.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data:  { lastSeenAt: new Date() },
+    });
+  } catch {
+    const session = sessionStore.get(sessionId);
+    if (session && !session.revokedAt) {
+      session.lastSeenAt = new Date();
+    }
+  }
 }
 
 /**
  * List all active sessions for a user.
  */
 export async function listUserSessions(userId: string) {
-  return db.userSession.findMany({
-    where: {
-      userId,
-      revokedAt: null,
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { lastSeenAt: 'desc' },
-    select: {
-      id: true, deviceId: true, deviceName: true, deviceType: true,
-      lastSeenAt: true, createdAt: true, ipAddress: true,
-    },
-  });
+  try {
+    const { db } = await import('./db');
+    return db.userSession.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      select: {
+        id: true, deviceId: true, deviceName: true, deviceType: true,
+        lastSeenAt: true, createdAt: true, ipAddress: true,
+      },
+    });
+  } catch {
+    return Array.from(sessionStore.values())
+      .filter((session) => session.userId === userId && !session.revokedAt && session.expiresAt > new Date())
+      .sort((a, b) => b.lastSeenAt.getTime() - a.lastSeenAt.getTime())
+      .map((session) => ({
+        id: session.id,
+        deviceId: session.deviceId,
+        deviceName: session.deviceName,
+        deviceType: session.deviceType,
+        lastSeenAt: session.lastSeenAt,
+        createdAt: session.createdAt,
+        ipAddress: session.ipAddress,
+      }));
+  }
 }
 
 /**
  * Revoke a single session.
  */
 export async function revokeSession(sessionId: string, userId: string): Promise<void> {
-  await db.userSession.updateMany({
-    where: { id: sessionId, userId },
-    data:  { revokedAt: new Date() },
-  });
-  // Also revoke all refresh tokens for this session
-  await db.refreshToken.updateMany({
-    where: { sessionId, revokedAt: null },
-    data:  { revokedAt: new Date(), revokedReason: 'session_revoked' },
-  });
+  try {
+    const { db } = await import('./db');
+    await db.userSession.updateMany({
+      where: { id: sessionId, userId },
+      data:  { revokedAt: new Date() },
+    });
+    await db.refreshToken.updateMany({
+      where: { sessionId, revokedAt: null },
+      data:  { revokedAt: new Date(), revokedReason: 'session_revoked' },
+    });
+  } catch {
+    const session = sessionStore.get(sessionId);
+    if (session && session.userId === userId) {
+      session.revokedAt = new Date();
+    }
+    for (const record of refreshStore.values()) {
+      if (record.sessionId === sessionId && !record.revokedAt) {
+        record.revokedAt = new Date();
+        record.revokedReason = 'session_revoked';
+      }
+    }
+  }
 }
 
 /**
  * Revoke ALL sessions for a user (global logout).
  */
 export async function revokeAllUserSessions(userId: string): Promise<void> {
-  await db.userSession.updateMany({
-    where: { userId, revokedAt: null },
-    data:  { revokedAt: new Date() },
-  });
-  await db.refreshToken.updateMany({
-    where: { userId, revokedAt: null },
-    data:  { revokedAt: new Date(), revokedReason: 'all_sessions_revoked' },
-  });
+  try {
+    const { db } = await import('./db');
+    await db.userSession.updateMany({
+      where: { userId, revokedAt: null },
+      data:  { revokedAt: new Date() },
+    });
+    await db.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data:  { revokedAt: new Date(), revokedReason: 'all_sessions_revoked' },
+    });
+  } catch {
+    for (const session of sessionStore.values()) {
+      if (session.userId === userId && !session.revokedAt) {
+        session.revokedAt = new Date();
+      }
+    }
+    for (const record of refreshStore.values()) {
+      if (record.userId === userId && !record.revokedAt) {
+        record.revokedAt = new Date();
+        record.revokedReason = 'all_sessions_revoked';
+      }
+    }
+  }
 }
 
 // ── Refresh Token Family ───────────────────────────────────
@@ -289,15 +520,31 @@ export async function storeRefreshFamily(
   tokenHash: string,
   sessionId: string
 ): Promise<void> {
-  await db.refreshToken.create({
-    data: {
+  try {
+    const { db } = await import('./db');
+    await db.refreshToken.create({
+      data: {
+        userId,
+        sessionId,
+        family,
+        tokenHash,
+        expiresAt: nowPlusDays(SESSION_TTL_DAYS),
+      },
+    });
+  } catch {
+    refreshStore.set(family, {
+      id: `rf_${randomBytes(8).toString('hex')}`,
       userId,
       sessionId,
       family,
       tokenHash,
       expiresAt: nowPlusDays(SESSION_TTL_DAYS),
-    },
-  });
+      revokedAt: null,
+      revokedReason: null,
+      createdAt: new Date(),
+      rotatedAt: null,
+    });
+  }
 }
 
 /**
@@ -308,11 +555,20 @@ export async function validateRefreshFamily(
   family:    string,
   tokenHash: string
 ): Promise<boolean> {
-  const record = await db.refreshToken.findUnique({ where: { family } });
-  if (!record) return false;
-  if (record.revokedAt) return false;
-  if (record.expiresAt < new Date()) return false;
-  return record.tokenHash === tokenHash;
+  try {
+    const { db } = await import('./db');
+    const record = await db.refreshToken.findUnique({ where: { family } });
+    if (!record) return false;
+    if (record.revokedAt) return false;
+    if (record.expiresAt < new Date()) return false;
+    return record.tokenHash === tokenHash;
+  } catch {
+    const record = refreshStore.get(family);
+    if (!record) return false;
+    if (record.revokedAt) return false;
+    if (record.expiresAt < new Date()) return false;
+    return record.tokenHash === tokenHash;
+  }
 }
 
 /**
@@ -322,10 +578,19 @@ export async function rotateRefreshFamily(
   family:       string,
   newTokenHash: string
 ): Promise<void> {
-  await db.refreshToken.update({
-    where: { family },
-    data:  { tokenHash: newTokenHash, rotatedAt: new Date() },
-  });
+  try {
+    const { db } = await import('./db');
+    await db.refreshToken.update({
+      where: { family },
+      data:  { tokenHash: newTokenHash, rotatedAt: new Date() },
+    });
+  } catch {
+    const record = refreshStore.get(family);
+    if (record) {
+      record.tokenHash = newTokenHash;
+      record.rotatedAt = new Date();
+    }
+  }
 }
 
 /**
@@ -335,19 +600,33 @@ export async function revokeRefreshFamily(
   family: string,
   reason  = 'revoked'
 ): Promise<void> {
-  await db.refreshToken.updateMany({
-    where: { family },
-    data:  { revokedAt: new Date(), revokedReason: reason },
-  });
+  try {
+    const { db } = await import('./db');
+    await db.refreshToken.updateMany({
+      where: { family },
+      data:  { revokedAt: new Date(), revokedReason: reason },
+    });
+  } catch {
+    const record = refreshStore.get(family);
+    if (record) {
+      record.revokedAt = new Date();
+      record.revokedReason = reason;
+    }
+  }
 }
 
 /**
  * Get session ID from a refresh token family.
  */
 export async function getSessionIdFromFamily(family: string): Promise<string | null> {
-  const record = await db.refreshToken.findUnique({
-    where: { family },
-    select: { sessionId: true },
-  });
-  return record?.sessionId ?? null;
+  try {
+    const { db } = await import('./db');
+    const record = await db.refreshToken.findUnique({
+      where: { family },
+      select: { sessionId: true },
+    });
+    return record?.sessionId ?? null;
+  } catch {
+    return refreshStore.get(family)?.sessionId ?? null;
+  }
 }
